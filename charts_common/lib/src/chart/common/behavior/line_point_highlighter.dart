@@ -16,6 +16,7 @@
 import 'dart:collection' show LinkedHashMap;
 import 'dart:math' show max, min, Point, Rectangle;
 
+import 'package:charts_common/common.dart';
 import 'package:meta/meta.dart';
 
 import '../../../common/color.dart' show Color;
@@ -96,6 +97,8 @@ class LinePointHighlighter<D> implements ChartBehavior<D> {
   /// Renderer used to draw the highlighted points.
   final SymbolRenderer symbolRenderer;
 
+  SelectionModel _selectionModel;
+
   BaseChart<D> _chart;
 
   _LinePointLayoutView _view;
@@ -174,6 +177,7 @@ class LinePointHighlighter<D> implements ChartBehavior<D> {
   }
 
   void _selectionChanged(SelectionModel selectionModel) {
+    // _selectionModel = selectionModel;
     _chart.redraw(skipLayout: true, skipAnimation: true);
   }
 
@@ -242,6 +246,20 @@ class LinePointHighlighter<D> implements ChartBehavior<D> {
           x: detail.chartPosition.x,
           y: detail.chartPosition.y);
 
+// ChartBehavior<D> seriesLegend = _chart.behaviors.firstWhere((behavior)  {
+//       return (behavior is SeriesLegend);
+//     }, orElse: () {
+//       return null;
+//     });
+
+//   print('--- seriesLegend is SeriesLegend: ${seriesLegend is SeriesLegend} ---');
+
+//     if (seriesLegend is SeriesLegend) {
+//       bool isSeriesHidden = (seriesLegend as SeriesLegend).isSeriesHidden(lineKey);
+//       print('--- isSeriesHidden: ${isSeriesHidden} ---');
+
+//     }
+
       // Update the set of points that still exist in the series data.
       _currentKeys.add(pointKey);
 
@@ -260,11 +278,37 @@ class LinePointHighlighter<D> implements ChartBehavior<D> {
 
     // Animate out points that don't exist anymore.
     _seriesPointMap.forEach((String key, _AnimatedPoint<D> point) {
-      if (_currentKeys.contains(point.key) != true) {
+      // _selectionModel.selectedSeries.
+
+      ChartBehavior<D> seriesLegend = _chart.behaviors.firstWhere((behavior) {
+        return (behavior is SeriesLegend);
+      }, orElse: () {
+        return null;
+      });
+
+      print(
+          '--- seriesLegend is SeriesLegend: ${seriesLegend is SeriesLegend} ---');
+      bool isSeriesHidden = false;
+
+      if (seriesLegend is SeriesLegend) {
+        isSeriesHidden = (seriesLegend as SeriesLegend)
+            .isSeriesHidden(point.key.split('::')[0]);
+        print('--- point.key: ${point.key} ---');
+        print('--- isSeriesHidden: ${isSeriesHidden} ---');
+      }
+
+      if (isSeriesHidden || _currentKeys.contains(point.key) != true) {
         point.animateOut();
         newSeriesMap[point.key] = point;
       }
     });
+
+    // newSeriesMap.forEach((String key, _AnimatedPoint<D> point) {
+    //     if (_currentKeys.contains(point.key) != true) {
+    //       point.animateOut();
+    //       newSeriesMap[point.key] = point;
+    //     }
+    //   });
 
     _seriesPointMap = newSeriesMap;
     _view.seriesPointMap = _seriesPointMap;
